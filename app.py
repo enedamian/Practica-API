@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 import datetime
-from productos import lista_productos as productos
+from productos import lista_productos as productos, validar_producto
 #creamos una instancia de la clase Flask
 app = Flask(__name__)
 
@@ -25,29 +25,36 @@ def getProducto(id):
 # guardamos un nuevo producto
 @app.route("/productos", methods=["POST"])
 def addProducto():
-    nuevoProducto = {
-        "id" : productos[-1]["id"] + 1,
-        "nombre": request.json["nombre"],
-        "precio": request.json["precio"],
-        "cantidad": request.json["cantidad"],
-        "fecha_actualizacion": datetime.date.today().strftime("%Y-%m-%d") # formato "YYYY-MM-DD" , opcional: %H-%M-%S = HH:MM:SS
-    }
-    productos.append(nuevoProducto)
-    return jsonify({"message": "Producto agregado exitosamente", "productos": productos}), 201 # 201 es el codigo de exito de "created"
+    if validar_producto(request.json):
+        nuevoProducto = {
+            "id" : productos[-1]["id"] + 1,
+            "nombre": request.json["nombre"],
+            "precio": request.json["precio"],
+            "cantidad": request.json["cantidad"],
+            "fecha_actualizacion": datetime.date.today().strftime("%Y-%m-%d") # formato "YYYY-MM-DD" , opcional: %H-%M-%S = HH:MM:SS
+        }
+        productos.append(nuevoProducto)
+        return jsonify({"message": "Producto agregado exitosamente", "productos": productos}), 201 # 201 es el codigo de exito de "created"
+    else:
+        return jsonify({"message": "Datos del producto incompletos"}), 400 # 400 es el codigo de error de "bad request"
 
 
 # actualización de producto
 @app.route("/productos/<int:id>", methods=["PUT"])
 def updateProducto(id):
-    productosEncontrados = [producto for producto in productos if producto["id"] == id]
-    if (len(productosEncontrados) > 0):
-        productosEncontrados[0]["nombre"] = request.json["nombre"]
-        productosEncontrados[0]["precio"] = request.json["precio"]
-        productosEncontrados[0]["cantidad"] = request.json["cantidad"]
-        productosEncontrados[0]["fecha_actualizacion"] = datetime.date.today().strftime("%Y-%m-%d")
-        return jsonify({"message": "Producto actualizado exitosamente", "producto": productosEncontrados[0], "productos": productos}), 200
+    if validar_producto(request.json):
+        productosEncontrados = [producto for producto in productos if producto["id"] == id]
+        if (len(productosEncontrados) > 0):
+            productosEncontrados[0]["nombre"] = request.json["nombre"]
+            productosEncontrados[0]["precio"] = request.json["precio"]
+            productosEncontrados[0]["cantidad"] = request.json["cantidad"]
+            productosEncontrados[0]["fecha_actualizacion"] = datetime.date.today().strftime("%Y-%m-%d")
+            return jsonify({"message": "Producto actualizado exitosamente", "producto": productosEncontrados[0], "productos": productos}), 200
+        else:
+            return jsonify({"message": "Producto no encontrado"}), 404
     else:
-        return jsonify({"message": "Producto no encontrado"}), 404
+        return jsonify({"message": "Datos del producto incompletos"}), 400
+    
 
 
 # eliminación de productos:
